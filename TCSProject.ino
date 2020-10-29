@@ -36,7 +36,14 @@ const int
 
 bool gl_en=0;				// Global motion on/off switch
 
+// BATTERY STATUS
+int value;// INPUT FROM BATTERY
+int Red = 8;// RED LED TO PIN 8
+
 void setup() {
+	
+	pinMode(8, OUTPUT);//LED OUTPUT TO INDICATE BATTERY LOW
+	
 	#ifdef DEBUG
 		Serial.begin(115200);
 		Serial.println("POWER ON\n");
@@ -67,6 +74,17 @@ void setup() {
 // Check battery status, set battery LEDs and block for critical battery
 void battstatus() {
 	// To-do: Write code
+  delay(100);
+  value = analogRead(0);
+  if (value<3.74)
+  {
+    digitalWrite(Red, HIGH);
+  }
+  else
+  {
+    digitalWrite(Red, LOW);
+  }
+  delay(500);
 }
 
 // Check if time interval is in range
