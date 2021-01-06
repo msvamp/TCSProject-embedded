@@ -27,9 +27,9 @@ const int
 ;
 
 // Other code files
-#include "ultrasonic.ino"
-#include "watering.ino"
-#include "motorcode.ino"
+#include "ultrasonic.h"
+#include "watering.h"
+#include "motorcode.h"
 
 void setup() {
 	#ifdef DEBUG
@@ -99,8 +99,6 @@ void battstatus() {
 		powerhold=false;
 	}
 }
-
-#include "watering.ino"
 
 void loop() {
 	t.update();
