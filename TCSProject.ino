@@ -3,26 +3,26 @@
  * MIT-WPU 2020-21
  */
 
-// Library for ultrasonic sensors - https://playground.arduino.cc/Code/NewPing/
-#include <NewPing.h>
+#include <Event.h>
+#include <Timer.h>
+Timer t;
 
 #define MAX_DIST 100
 #define SAFE_GAP 30
+#include "ultrasonic.ino"
+
 #define WATR_MIN 1000
 #define WATR_MAX 3000
 #define INERTINT 1000
 //#define DEBUG		// Uncomment during testing
 
+// Motion states
+enum {FWD,REV,HLT} motion;
+
 /* For the Nano, we have these pins available -
- * Digital: D2 to D13 (05 to 16)
+ * Digital: D2 to D13	(05 to 16)
  * Analog:	A7 to A0	(19 to 26)
  */
-
-NewPing sensor[2] = {
-	// NewPing(TRIGGER_PIN,ECHO_PIN,MAX_DISTANCE)
-	NewPing(5,7,MAX_DIST),	// Forward sensor
-	NewPing(6,8,MAX_DIST)	// Reverse sensor
-};
 
 const int
 	FWD_LED=9,
@@ -34,7 +34,8 @@ const int
 	CRI_BAT=14
 ;
 
-bool gl_en=0;				// Global motion on/off switch
+// Ultrasonic uses pins 5-8
+_ultrasonic(5,6,7,8);
 
 void setup() {
 	#ifdef DEBUG
@@ -42,7 +43,7 @@ void setup() {
 		Serial.println("POWER ON\n");
 	#endif
 
-	// Indcators
+	// Indicators
 	pinMode(FWD_LED,1);
 	pinMode(REV_LED,1);
 
@@ -94,13 +95,6 @@ void blockcheck() {
 	}
 }
 
-// Do we have safe distance for the given sensor?
-inline bool getsafe(size_t s=0) {
-	return (sensor[s].convert_cm(
-		sensor[s].ping_median(4)
-	)>SAFE_GAP);
-}
-
 unsigned long gnint=0;
 void go_(bool dir=0) {
 	if(isinert(gnint)) return;
@@ -126,6 +120,7 @@ void go_nowhere() {
 void loop() {
 	battstatus();
 	blockcheck();
+	motcheck();
 	if(gl_en) {
 		// To-do: refine motion logic and prevent sudden movements
 		// i.e. separate into setmotion() and applymotion()
@@ -142,4 +137,14 @@ void loop() {
 	}
 	else
 		go_nowhere();
+}
+
+void setMotion() {
+	// To-do: Increase speed gradually without blocking
+	if(motion==FWD)
+		moveForward();
+	else if(motion==REV)
+		moveBackward();
+	else
+		moveStop();
 }

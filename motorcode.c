@@ -1,11 +1,7 @@
 #include <AFMotor.h>
 #include <NewPing.h>
 
-#define TRIG_PIN A0
-#define ECHO_PIN A1
 #define MAX_SPEED 190 // sets speed of DC motors
-
-NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE);
 
 AF_DCMotor motor1(1, MOTOR12_1KHZ);
 AF_DCMotor motor2(2, MOTOR12_1KHZ);
@@ -25,7 +21,7 @@ void moveStop() {
 
 // code to start moving the motor
 void moveForward() {
-	if(!goesForward) { 
+	if(!goesForward) {
 		goesForward=true;
 		motor1.run(FORWARD);
 		motor2.run(FORWARD);
