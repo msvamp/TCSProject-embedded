@@ -1,6 +1,6 @@
 // Library for ultrasonic sensors - https://playground.arduino.cc/Code/NewPing
 #include <NewPing.h>
-NewPing sensor[2] = {null,null};
+NewPing *sensor;
 
 #define MAX_DIST 100
 #define SAFE_GAP 30
@@ -12,6 +12,10 @@ enum mstate prevmotion=FWD;
 // NewPing(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE)
 void _ultrasonic
 (uint8_t t0, uint8_t t1, uint8_t e0, uint8_t e1) {
+	pinMode(t0,1);	pinMode(t1,1);
+	pinMode(e0,0);	pinMode(e1,0);
+
+	sensor=(NewPing*)malloc(2*sizeof(NewPing));
 	// Forward sensor
 	sensor[0]=NewPing(t0,e0,MAX_DIST);
 	// Reverse sensor
@@ -20,9 +24,17 @@ void _ultrasonic
 
 // Do we have safe distance for the given sensor?
 bool getsafe(uint8_t s) {
-	return (sensor[s].convert_cm(
+	/*uint8_t d=sensor[s].convert_cm(
 		sensor[s].ping_median()
-	)>SAFE_GAP);
+	);*/
+	uint8_t d=sensor[s].ping_cm();
+	#ifdef DEBUG
+		Serial.print("Ultrasonic sensor ");
+		Serial.print(s);
+		Serial.print(" centimetres reading: ");
+		Serial.println(d);
+	#endif
+	return (d>SAFE_GAP);
 }
 
 inline bool is_waiting() {return (millis()-shortwaitstart)<SHTWTMAX;}
@@ -30,7 +42,8 @@ inline bool is_waiting() {return (millis()-shortwaitstart)<SHTWTMAX;}
 void ultracheck() {
 	if((motion==FWD && !getsafe(0)) || (motion==REV && !getsafe(1))) {
 		#ifdef DEBUG
-			Serial.println("Obstacle detected! Motion direction is "+((motion==FWD)?"FWD":"REV"));
+			Serial.print("Obstacle detected! Motion direction is ");
+			Serial.println((motion==FWD)?"FWD":"REV");
 			Serial.println("Halting for a short interval...");
 		#endif
 		prevmotion=motion;
@@ -40,7 +53,8 @@ void ultracheck() {
 	else if(motion==HLT && is_waiting() && getsafe(prevmotion)) {
 		#ifdef DEBUG
 			Serial.println("Obstacle has been cleared!");
-			Serial.println("Restoring previous motion direction "+((prevmotion==FWD)?"FWD":"REV"));
+			Serial.print("Restoring previous motion direction ");
+			Serial.println((prevmotion==FWD)?"FWD":"REV");
 		#endif
 		motion=prevmotion;
 	}
@@ -48,7 +62,8 @@ void ultracheck() {
 		motion=(prevmotion==FWD)?REV:FWD;
 		#ifdef DEBUG
 			Serial.println("Short halting interval expired!");
-			Serial.println("Inverting motion direction to "+((motion==FWD)?"FWD":"REV"));
+			Serial.print("Inverting motion direction to ");
+			Serial.println((motion==FWD)?"FWD":"REV");
 		#endif
 	}
 }

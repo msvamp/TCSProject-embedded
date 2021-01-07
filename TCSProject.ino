@@ -10,7 +10,7 @@ Timer t;
 enum mstate {FWD,REV,HLT} motion;
 
 #define UCHECK_INT 500
-#define PCHECK_INT 10000
+#define PCHECK_INT 30000
 #define DEBUG		// Uncomment during testing
 
 /* For the Nano, we have these pins available -
@@ -26,6 +26,8 @@ const int
 	BAT_PIN=A6,	CHG_PIN=A7
 ;
 
+int uchecker,bchecker,tservice,batstats;
+
 // Other code files
 #include "ultrasonic.h"
 #include "watering.h"
@@ -39,11 +41,11 @@ void setup() {
 	#endif
 
 	// Ultrasonic control
-	_ultrasonic(7,11,8,12);
+	_ultrasonic(10,14,11,15);
 
 	// ESP32 control
-	digitalWrite(MOT_HLD,1);
-	pinMode(MOT_HLD,0);
+	//digitalWrite(MOT_HLD,1);
+	pinMode(MOT_HLD,INPUT_PULLUP);
 
 	// Pump control
 	pinMode(SOL_CTL,1);
@@ -66,14 +68,13 @@ void setup() {
 		Serial.println("Starting timed tasks...");
 	#endif
 
-	int
-		uchecker=t.every(UCHECK_INT,ultracheck),
-		bchecker=t.every(BCHECK_INT,blockcheck),
-		tservice=t.every(MSERVICE_INT,motorstep)
-	;
+	motion=FWD;
+	uchecker=t.every(UCHECK_INT,ultracheck,NULL);
+	//bchecker=t.every(BCHECK_INT,blockcheck,NULL);
+	tservice=t.every(MSERVICE_INT,motorstep,NULL);
 
 	// These tasks should never stop
-	batstats=t.every(PCHECK_INT,battstatus);
+	//batstats=t.every(PCHECK_INT,battstatus,NULL);
 }
 
 // Check battery status, set battery LEDs and block for critical battery
@@ -94,8 +95,8 @@ void battstatus() {
 		delay(PCHECK_INT-1);
 	}
 	else if(powerhold) {
-		uchecker=t.every(UCHECK_INT,ultracheck);
-		bchecker=t.every(BCHECK_INT,blockcheck);
+		uchecker=t.every(UCHECK_INT,ultracheck,0);
+		bchecker=t.every(BCHECK_INT,blockcheck,0);
 		powerhold=false;
 	}
 }
@@ -106,6 +107,6 @@ void loop() {
 		m_dirn=1;
 	else if(motion==HLT)
 		mspeed=m_dirn=0;	// Redundancy is cool
-	else
+	else if(motion==REV)
 		m_dirn=-1;
 }
