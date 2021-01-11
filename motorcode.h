@@ -1,12 +1,7 @@
-#define MAX_SPEED 190	// Range: 0-255
+#define MAX_SPEED 100	// Range: 0-255
 #define ACC_TIME 3000
 
 const uint16_t MSERVICE_INT=(uint16_t)(ACC_TIME/MAX_SPEED);
-
-const int
-	RMOT_F=8,	RMOT_R=9,
-	FMOT_F=12,	FMOT_R=13
-;
 
 int8_t m_dirn=0;
 uint8_t mspeed=0;

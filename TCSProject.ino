@@ -11,6 +11,8 @@ enum mstate {FWD,REV,HLT} motion;
 
 #define UCHECK_INT 500
 #define PCHECK_INT 30000
+#define CCHECK_INT 500
+#define CCHECK_ACT 5000
 #define DEBUG		// Uncomment during testing
 
 /* For the Nano, we have these pins available -
@@ -18,15 +20,18 @@ enum mstate {FWD,REV,HLT} motion;
  * Analog:	A7 to A0	(19 to 26)
  */
 
-bool powerhold=false;
+bool powerhold=false,chghold=false;
 
 const int
-	MOT_HLD=5,
-	SOL_CTL=16,
-	BAT_PIN=A6,	CHG_PIN=A7
+	MOT_HLD=2,
+	SOL_CTL=LED_BUILTIN,
+	PST_PIN=3,
+	BAT_PIN=A6,	CHG_PIN=A7,
+	RMOT_F=5, RMOT_R=6,
+	FMOT_F=9,	FMOT_R=10
 ;
 
-int uchecker,bchecker,tservice,batstats;
+int uchecker,bchecker,tservice,batstats,chgstats;
 
 // Other code files
 #include "ultrasonic.h"
@@ -41,22 +46,26 @@ void setup() {
 	#endif
 
 	// Ultrasonic control
-	_ultrasonic(10,14,11,15);
+	_ultrasonic(7,11,8,12);
 
 	// ESP32 control
-	//digitalWrite(MOT_HLD,1);
 	pinMode(MOT_HLD,INPUT_PULLUP);
+	digitalWrite(MOT_HLD,1);
 
 	// Pump control
 	pinMode(SOL_CTL,1);
+	digitalWrite(SOL_CTL,0);
 
-	// Power source control
+	// Power control
 	pinMode(BAT_PIN,0);
 	pinMode(CHG_PIN,0);
+	pinMode(PST_PIN,1);
+	digitalWrite(PST_PIN,0);
 
 	// Motor control
 	pinMode(RMOT_F,1);	pinMode(RMOT_R,1);
 	pinMode(FMOT_F,1);	pinMode(FMOT_R,1);
+	motorstop();
 
 	// Startup delay
 	#ifdef DEBUG
@@ -69,32 +78,64 @@ void setup() {
 	#endif
 
 	motion=FWD;
-	uchecker=t.every(UCHECK_INT,ultracheck,NULL);
-	//bchecker=t.every(BCHECK_INT,blockcheck,NULL);
-	tservice=t.every(MSERVICE_INT,motorstep,NULL);
+	uchecker=t.every(UCHECK_INT,ultracheck,0);
+	bchecker=t.every(BCHECK_INT,blockcheck,0);
+	tservice=t.every(MSERVICE_INT,motorstep,0);
 
-	// These tasks should never stop
-	//batstats=t.every(PCHECK_INT,battstatus,NULL);
+	// Power-related tasks
+	batstats=t.every(PCHECK_INT,battstatus,0);
+	chgstats=t.every(CCHECK_INT,chgstatus,0);
+}
+
+void chgstatus() {
+	if(!chghold && analogRead(CHG_PIN)>100) {
+		#ifdef DEBUG
+			Serial.println("Charging is active!");
+		#endif
+
+		t.stop(uchecker);
+		t.stop(bchecker);
+		digitalWrite(SOL_CTL,0);
+		motorstop();
+		chghold=true;
+
+		t.stop(chgstats);
+		chgstats=t.every(CCHECK_ACT,chgstatus,0);
+	}
+	else if(chghold) {
+		t.stop(chgstats);
+		chgstats=t.every(CCHECK_INT,chgstatus,0);
+		uchecker=t.every(UCHECK_INT,ultracheck,0);
+		bchecker=t.every(BCHECK_INT,blockcheck,0);
+		chghold=false;
+	}
 }
 
 // Check battery status, set battery LEDs and block for critical battery
 void battstatus() {
-	float x=100*analogRead(BAT_PIN)/1024.0;
+	if(chghold) {
+		#ifdef DEBUG
+			Serial.println("Charging is active, ignoring battery check");
+		#endif
+		return;
+	}
+
+	uint16_t x=analogRead(BAT_PIN);
 	#ifdef DEBUG
 		Serial.print("Battery voltage indicator is at ");
 		Serial.println(x);
 	#endif
 
 	// Stop motion if battery is low
-	if(x<50) {
+	if(x<536) {
 		motorstop();
 		digitalWrite(SOL_CTL,0);
 		t.stop(uchecker);
 		t.stop(bchecker);
 		powerhold=true;
-		delay(PCHECK_INT-1);
+		//delay(PCHECK_INT-1);	// Extra safety
 	}
-	else if(powerhold) {
+	else if(powerhold && x>621) {
 		uchecker=t.every(UCHECK_INT,ultracheck,0);
 		bchecker=t.every(BCHECK_INT,blockcheck,0);
 		powerhold=false;
@@ -103,10 +144,16 @@ void battstatus() {
 
 void loop() {
 	t.update();
+
 	if(motion==FWD)
 		m_dirn=1;
 	else if(motion==HLT)
 		mspeed=m_dirn=0;	// Redundancy is cool
 	else if(motion==REV)
 		m_dirn=-1;
+
+	if(powerhold || chghold)
+		digitalWrite(PST_PIN,1);
+	else
+		digitalWrite(PST_PIN,0);
 }
