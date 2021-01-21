@@ -2,15 +2,9 @@
 #include <NewPing.h>
 NewPing *sensor;
 
-// Library for queueing values
-#include <cQueue.h>
-Queue_t lastsafe[2];
-
 #define MAX_DIST 400
-#define SAFE_GAP 30
+#define SAFE_GAP 60
 #define SHTWTMAX 5000
-#define DSF_VAL 5
-#define ZSF_VAL 3
 
 unsigned long shortwaitstart=0;
 enum mstate prevmotion=FWD;
@@ -19,13 +13,6 @@ enum mstate prevmotion=FWD;
 void _ultrasonic
 (uint8_t t0, uint8_t t1, uint8_t e0, uint8_t e1) {
 	sensor=(NewPing*)calloc(2,sizeof(NewPing));
-	q_init(&lastsafe[0],sizeof(uint8_t),DSF_VAL,FIFO,true);
-	q_init(&lastsafe[1],sizeof(uint8_t),DSF_VAL,FIFO,true);
-
-	for(uint8_t j=0; j<2; ++j)
-		for(uint8_t i=DSF_VAL; i>0; --i)
-			q_push(&lastsafe[j],0);
-
 	// Forward sensor
 	sensor[0]=NewPing(t0,e0,MAX_DIST);
 	// Reverse sensor
@@ -34,49 +21,20 @@ void _ultrasonic
 
 // Do we have safe distance for the given sensor?
 bool getsafe(uint8_t s) {
-	uint8_t zerosafe=ZSF_VAL,d=0;
-
-	while(d==0 && (zerosafe--)>0) {
-		d=sensor[s].ping_cm();
-		delay(1);
-	}
-
-	if(d==0) {
-		#ifdef DEBUG
-			Serial.print("Ultrasonic sensor ");
-			Serial.print(s);
-			Serial.println(" produced 3 consecutive zero values!");
-		#endif
-		return false;
-	}
-
-	q_push(&lastsafe[s],d);
+	uint16_t d=sensor[s].ping_cm();
 
 	#ifdef DEBUG
-		Serial.print("Ultrasonic sensor ");
-		Serial.print(s);
-		Serial.print(" :: [ ");
+		Serial.print("Ultrasonic sensor (");
+		Serial.print(s?"REV":"FWD");
+		Serial.print(") :\t");
+    Serial.print(d);
+    Serial.println(" cm");
 	#endif
 
-	bool finals=true;
-	for(uint8_t i=0,val=0; i<DSF_VAL; ++i) {
-		q_peekIdx(&lastsafe[s],&val,i);
-
-		#ifdef DEBUG
-			Serial.print(val);
-			Serial.print(" ");
-		#endif
-
-		if(finals && val<=SAFE_GAP)
-			finals=false;
-	}
-
-	#ifdef DEBUG
-		Serial.print("] :: ");
-		Serial.println(finals?"true":"false");
-	#endif
-
-	return finals;
+  if(d==0 || d>SAFE_GAP)
+    return true;
+  return false;
+  
 }
 
 inline bool is_waiting() {return (millis()-shortwaitstart)<SHTWTMAX;}

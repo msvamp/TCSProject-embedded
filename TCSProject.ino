@@ -9,11 +9,11 @@ Timer t;
 // Motion states
 enum mstate {FWD,REV,HLT} motion;
 
-#define UCHECK_INT 500
+#define UCHECK_INT 100
 #define PCHECK_INT 30000
 #define CCHECK_INT 500
 #define CCHECK_ACT 5000
-#define DEBUG		// Uncomment during testing
+//#define DEBUG		// Uncomment during testing
 
 /* For the Nano, we have these pins available -
  * Digital: D2 to D13	(05 to 16)
