@@ -28,7 +28,8 @@ const int
 	PST_PIN=3,
 	BAT_PIN=A6,	CHG_PIN=A7,
 	RMOT_F=5, RMOT_R=6,
-	FMOT_F=9,	FMOT_R=10
+	FMOT_F=9,	FMOT_R=10,
+	LEDG=A0,/*LEDR1=A1,*/LEDR2=A2
 ;
 
 int uchecker,bchecker,tservice,batstats,chgstats;
@@ -67,6 +68,11 @@ void setup() {
 	pinMode(FMOT_F,1);	pinMode(FMOT_R,1);
 	motorstop();
 
+	// Status LEDs
+	pinMode(LEDG,1);	digitalWrite(LEDG,1);
+	//pinMode(LEDR1,1); digitalWrite(LEDR1,1);	// Dead LED
+	pinMode(LEDR2,1); digitalWrite(LEDR2,1);
+
 	// Startup delay
 	#ifdef DEBUG
 		Serial.println("Startup delay...");
@@ -102,7 +108,7 @@ void chgstatus() {
 		t.stop(chgstats);
 		chgstats=t.every(CCHECK_ACT,chgstatus,0);
 	}
-	else if(chghold) {
+	else if(chghold && analogRead(CHG_PIN)<50) {
 		t.stop(chgstats);
 		chgstats=t.every(CCHECK_INT,chgstatus,0);
 		uchecker=t.every(UCHECK_INT,ultracheck,0);
@@ -145,12 +151,18 @@ void battstatus() {
 void loop() {
 	t.update();
 
-	if(motion==FWD)
+	if(motion==FWD) {
+		digitalWrite(LEDG,1);
 		m_dirn=1;
-	else if(motion==HLT)
+	}
+	else if(motion==HLT) {
+		digitalWrite(LEDG,0);
 		mspeed=m_dirn=0;	// Redundancy is cool
-	else if(motion==REV)
+	}
+	else if(motion==REV) {
+		digitalWrite(LEDG,1);
 		m_dirn=-1;
+	}
 
 	if(powerhold || chghold)
 		digitalWrite(PST_PIN,1);

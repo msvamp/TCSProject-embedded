@@ -27,14 +27,15 @@ bool getsafe(uint8_t s) {
 		Serial.print("Ultrasonic sensor (");
 		Serial.print(s?"REV":"FWD");
 		Serial.print(") :\t");
-    Serial.print(d);
-    Serial.println(" cm");
+		Serial.print(d);
+		Serial.println(" cm");
 	#endif
 
-  if(d==0 || d>SAFE_GAP)
-    return true;
-  return false;
-  
+	digitalWrite(LEDR2,0);
+	if(d==0 || d>SAFE_GAP)
+		return true;
+	digitalWrite(LEDR2,1);
+	return false;
 }
 
 inline bool is_waiting() {return (millis()-shortwaitstart)<SHTWTMAX;}
