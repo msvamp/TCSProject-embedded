@@ -23,15 +23,16 @@ void waterstopper() {
 	#endif
 
 	// Reset motion and pump
-	motion=HLT;	 // Let 'ultracheck' deal with motion while resuming
+	//motion=HLT;	 // Let 'ultracheck' deal with motion while resuming
+
 	digitalWrite(SOL_CTL,0);
 
 	// Restore natural behaviour for 'ultracheck'
-	prevmotion=FWD;
-	shortwaitstart=millis();
+	//prevmotion=FWD;
+	//shortwaitstart=millis();
 
 	// Restart original timed tasks
-	uchecker=t.every(UCHECK_INT,ultracheck,0);
+	//uchecker=t.every(UCHECK_INT,ultracheck,0);
 	t.stop(bchecker);
 	bchecker=t.every(BCHECK_INT,blockcheck,0);
 }
@@ -50,15 +51,20 @@ void blockcheck() {
 
 	#ifdef DEBUG
 		Serial.println("Motion hold encountered!");
-		Serial.println("Stopping motion, starting pump...");
+		//Serial.println("Stopping motion, starting pump...");
+		Serial.println("Slowing down motor...");
 	#endif
 
 	// Start pump, stop motion
 	digitalWrite(SOL_CTL,1);
-	motion=HLT;
+	//motion=HLT;
+	analogWrite(RMOT_R,MAX_SPEED-30);
+	analogWrite(RMOT_F,0);
+	analogWrite(FMOT_R,MAX_SPEED-30);
+	analogWrite(FMOT_F,0);
 
 	// Stop motion-related timed tasks
-	t.stop(uchecker);
+	//t.stop(uchecker);
 	t.stop(bchecker);
 	//wforcestopped=false;
 

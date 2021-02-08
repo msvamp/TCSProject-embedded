@@ -36,8 +36,8 @@ int uchecker,bchecker,tservice,batstats,chgstats;
 
 // Other code files
 #include "ultrasonic.h"
-#include "watering.h"
 #include "motorcode.h"
+#include "watering.h"
 
 void setup() {
 	#ifdef DEBUG
