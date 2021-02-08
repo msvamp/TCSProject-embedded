@@ -2,11 +2,6 @@
 #define WATR_MAX 3000*/
 #define BCHECK_INT 10
 
-/*/ Will forcefully stop the pump when true
-bool wforcestopped;
-
-// Timed function to set the force stopper
-void waterforcestop() {wforcestopped=true;}*/
 void blockcheck();
 
 void waterstopper() {
@@ -37,22 +32,13 @@ void waterstopper() {
 	bchecker=t.every(BCHECK_INT,blockcheck,0);
 }
 
-/*void startwaterstopper() {
-	#ifdef DEBUG
-		Serial.println("Minimum watering interval completed!");
-		Serial.println("Waiting for ESP pin to go off...");
-	#endif
-	//t.stop(bchecker);	 // Redundancy is cool
-	bchecker=t.every(BCHECK_INT,waterstopper,0);
-}*/
-
 void blockcheck() {
 	if(digitalRead(MOT_HLD) || motion==REV) return;
 
 	#ifdef DEBUG
 		Serial.println("Motion hold encountered!");
 		//Serial.println("Stopping motion, starting pump...");
-		Serial.println("Slowing down motor...");
+		Serial.println("Slowing down motor, starting pump...");
 	#endif
 
 	// Start pump, stop motion
@@ -66,10 +52,5 @@ void blockcheck() {
 	// Stop motion-related timed tasks
 	//t.stop(uchecker);
 	t.stop(bchecker);
-	//wforcestopped=false;
-
-	/*/ Set timers for min and max intervals
-	t.after(WATR_MIN,startwaterstopper,0);
-	t.after(WATR_MAX,waterforcestop,0);*/
 	bchecker=t.every(BCHECK_INT,waterstopper,0);
 }

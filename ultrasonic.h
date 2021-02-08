@@ -61,6 +61,14 @@ void ultracheck() {
 	}
 	else if(motion==HLT && !is_waiting()) {
 		motion=(prevmotion==FWD)?REV:FWD;
+
+		// Unconditionally turn off pump while going backwards
+		if(motion==REV) {
+			digitalWrite(SOL_CTL,0);
+			t.stop(bchecker);
+			bchecker=t.every(BCHECK_INT,blockcheck,0);
+		}
+
 		#ifdef DEBUG
 			Serial.println("Short halting interval expired!");
 			Serial.print("Inverting motion direction to ");
