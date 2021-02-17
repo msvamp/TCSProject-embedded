@@ -77,7 +77,7 @@ void setup() {
 	#ifdef DEBUG
 		Serial.println("Startup delay...");
 	#endif
-	delay(5000);
+	delay(12500);
 
 	#ifdef DEBUG
 		Serial.println("Starting timed tasks...");

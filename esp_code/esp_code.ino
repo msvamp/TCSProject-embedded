@@ -9,15 +9,16 @@ const char* WIFI_PASS = "greenblue";
 WebServer server(80);
 String header;
 
-//// Following three settings are optional
-IPAddress ip(192, 168, 137, 1);
-IPAddress gateway(192, 168, 137, 254);
+// WiFi network configuration
+IPAddress ip(192, 168, 137, 199);
+IPAddress dns(0, 0, 0, 0);
+IPAddress gateway(192, 168, 137, 1);
 IPAddress subnet(255, 255, 255, 0);
 
 static auto loRes = esp32cam::Resolution::find(320, 240); // set the resolution to 320x240
 static auto hiRes = esp32cam::Resolution::find(800, 600); // set the resolution to 800x600
 
-void handleBmp() // A function to retrieve BMP images contiuosly from the server
+void handleBmp()		// A function to retrieve BMP images contiuosly from the server
 {
 	if (!esp32cam::Camera.changeResolution(loRes)) {
 		Serial.println("SET-LO-RES FAIL");
@@ -46,7 +47,7 @@ void handleBmp() // A function to retrieve BMP images contiuosly from the server
 	frame->writeTo(client);
 }
 
-void serveJpg() // A function to retrieve JPG images contiuosly from the server
+void serveJpg()			// A function to retrieve JPG images contiuosly from the server
 {
 	auto frame = esp32cam::capture();
 	if (frame == nullptr) {
@@ -63,7 +64,7 @@ void serveJpg() // A function to retrieve JPG images contiuosly from the server
 	frame->writeTo(client);
 }
 
-void handleJpgLo()	// A function to handle low quality JPG images contiuosly from the server
+void handleJpgLo()		// A function to handle low quality JPG images contiuosly from the server
 {
 	if (!esp32cam::Camera.changeResolution(loRes)) {
 		Serial.println("SET-LO-RES FAIL");
@@ -71,7 +72,7 @@ void handleJpgLo()	// A function to handle low quality JPG images contiuosly fro
 	serveJpg();
 }
 
-void handleJpgHi()	// A function to handle High quality JPG images contiuosly from the server
+void handleJpgHi()		// A function to handle High quality JPG images contiuosly from the server
 {
 	if (!esp32cam::Camera.changeResolution(hiRes)) {
 		Serial.println("SET-HI-RES FAIL");
@@ -79,13 +80,13 @@ void handleJpgHi()	// A function to handle High quality JPG images contiuosly fr
 	serveJpg();
 }
 
-void handleJpg()	// A function to rhandle JPG images contiuosly from the server
+void handleJpg()		// A function to rhandle JPG images contiuosly from the server
 {
 	server.sendHeader("Location", "/cam-hi.jpg");
 	server.send(302, "", "");
 }
 
-void handleMjpeg()	// A function to video stream of JPEG images	contiuosly from the server
+void handleMjpeg()		// A function to video stream of JPEG images	contiuosly from the server
 {
 	if (!esp32cam::Camera.changeResolution(hiRes)) {
 		Serial.println("SET-HI-RES FAIL");
@@ -115,10 +116,33 @@ void signal_off(){
 	server.send(200, "signal_off");
 }
 
+void WiFiConnect() {
+	digitalWrite(GPIO_PIN_NUMBER_15,HIGH);
+	Serial.println();
+	Serial.println("Connecting to WiFi...");
+
+	WiFi.persistent(false);
+	WiFi.mode(WIFI_STA);
+	WiFi.config(ip,dns,gateway,subnet);
+	WiFi.begin(WIFI_SSID, WIFI_PASS);
+
+	while (WiFi.status() != WL_CONNECTED) {
+		delay(900);
+		digitalWrite(4,1);
+		delay(100);
+		digitalWrite(4,0);
+	}
+
+	Serial.print("http://");
+	Serial.println(WiFi.localIP());
+	Serial.println();
+}
+
 void setup()
 {
 	Serial.begin(115200); // begin server at baud rate 115200
 	pinMode(GPIO_PIN_NUMBER_15,OUTPUT);
+	pinMode(4,OUTPUT);
 	digitalWrite(GPIO_PIN_NUMBER_15,HIGH);
 
 	using namespace esp32cam;
@@ -131,17 +155,9 @@ void setup()
 	bool ok = Camera.begin(cfg);
 	Serial.println(ok ? "CAMERA OK" : "CAMERA FAIL");
 
-	WiFi.persistent(false);
-	WiFi.mode(WIFI_STA);
-	WiFi.begin(WIFI_SSID, WIFI_PASS); // connect to the WIFI network
-	while (WiFi.status() != WL_CONNECTED) {
-		delay(500);
-	}
+	WiFiConnect();
 
-	Serial.print("http://");
-	Serial.println(WiFi.localIP());
-
-// below lines of code start the servers for all the described function.
+	// below lines of code start the servers for all the described function.
 	server.on("/cam.bmp", handleBmp);
 	server.on("/cam-lo.jpg", handleJpgLo);
 	server.on("/cam-hi.jpg", handleJpgHi);
@@ -149,17 +165,20 @@ void setup()
 	server.on("/cam.mjpeg", handleMjpeg);
 	server.on("/signal_on",signal_on);
 	server.on("/signal_off",signal_off);
-
 	server.begin();
 
-// these lines of code are used only for debugging purposes to verify weather or not the cam is connected to server
-	Serial.println("	/cam.bmp");
-	Serial.println("	/cam-lo.jpg");
-	Serial.println("	/cam-hi.jpg");
-	Serial.println("	/cam.mjpeg");
+	// these lines of code are used only for debugging purposes to verify weather or not the cam is connected to server
+	Serial.println("\t/cam.bmp");
+	Serial.println("\t/cam-lo.jpg");
+	Serial.println("\t/cam-hi.jpg");
+	Serial.println("\t/cam.mjpeg");
 }
 
-void loop()
-{
-	server.handleClient();
+void loop() {
+	if(WiFi.status() != WL_CONNECTED) {
+		WiFiConnect();
+		delay(500);
+	}
+	else
+		server.handleClient();
 }
