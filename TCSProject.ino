@@ -35,9 +35,9 @@ const int
 int uchecker,bchecker,tservice,batstats,chgstats;
 
 // Other code files
-#include "ultrasonic.h"
 #include "motorcode.h"
 #include "watering.h"
+#include "ultrasonic.h"
 
 void setup() {
 	#ifdef DEBUG
